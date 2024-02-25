@@ -8,8 +8,8 @@ pub struct Humidity(u16);
 
 impl Humidity {
     pub fn new(value: u16) -> Result<Humidity, GardenError> {
-        if value < WET_100_PERCENT || value > WET_0_PERCENT {
-            return Err(GardenError::InvalidValue(value))
+        if (WET_100_PERCENT..WET_0_PERCENT).contains(&value) {
+            return Err(GardenError::InvalidValue(value));
         }
 
         Ok(Humidity(value))
