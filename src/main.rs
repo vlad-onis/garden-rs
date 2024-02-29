@@ -1,31 +1,37 @@
 #![no_std]
 #![no_main]
 
-use esp32c3_hal::{clock::ClockControl, peripherals::Peripherals, prelude::*};
+use esp32c3_hal::{clock::ClockControl, peripherals::Peripherals, prelude::*, Delay};
 use esp_backtrace as _;
+use esp_println::println;
+use esp_wifi::wifi::WifiMode;
 
 mod garden;
 mod wifi_control;
 
-use esp_wifi::wifi::WifiMode;
 use wifi_control::controller::WifiController;
 
 #[entry]
 fn main() -> ! {
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
-    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let clocks = ClockControl::max(system.clock_control).freeze();
+    let mut delay = Delay::new(&clocks);
 
-    let controller = WifiController::new("Test", "Test", WifiMode::ApSta);
-
-    let _ = controller.connect_to_wifi(
+    let wifi_control = WifiController::new("Hoemies", "AreAlwaysWelcome12@", WifiMode::ApSta);
+    let connected = wifi_control.connect_to_wifi(
         peripherals.SYSTIMER,
         peripherals.RNG,
         system.radio_clock_control,
         &clocks,
+        peripherals.WIFI,
+        &mut delay,
     );
 
-    panic!("this never returns");
+    println!("{:?}", connected);
+
+    panic!("This never returns");
+
     // let analog = peripherals.APB_SARADC.split();
 
     // let mut gardener = Gardener::setup(io, analog);
