@@ -1,17 +1,18 @@
+use esp_println::dbg;
 use thiserror_no_std::Error;
 
-pub const WET_100_PERCENT: u16 = 3100;
-pub const WET_0_PERCENT: u16 = 4095;
+pub const WET_100_PERCENT: u16 = 3070;
+pub const WET_0_PERCENT: u16 = 4096;
 
 #[derive(Debug)]
 pub struct Humidity(u16);
 
 impl Humidity {
     pub fn new(value: u16) -> Result<Humidity, GardenError> {
-        if (WET_100_PERCENT..WET_0_PERCENT).contains(&value) {
+        if !(WET_100_PERCENT..WET_0_PERCENT).contains(&value) {
             return Err(GardenError::InvalidValue(value));
         }
-
+        dbg!("The value is: {}", value);
         Ok(Humidity(value))
     }
 }
