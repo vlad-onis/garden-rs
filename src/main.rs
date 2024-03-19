@@ -1,43 +1,35 @@
 #![no_std]
 #![no_main]
+#![feature(type_alias_impl_trait)]
 
-use esp32c3_hal::{clock::ClockControl, gpio::IO, peripherals::Peripherals, prelude::*, Delay};
-use esp_backtrace as _;
-use esp_println::{dbg, println};
+pub mod wifi_control;
+
+use embassy_executor::Spawner;
+use esp_hal::{clock::ClockControl, peripherals::Peripherals, prelude::*};
 use esp_wifi::wifi::WifiMode;
+use wifi_control::controller;
 
-mod garden;
-mod wifi_control;
-
-use garden_rs::garden::gardener::Gardener;
-use wifi_control::controller::WifiController;
-
-#[entry]
-fn main() -> ! {
+#[main]
+async fn main(spawner: Spawner) -> ! {
     let peripherals = Peripherals::take();
+
     let system = peripherals.SYSTEM.split();
     let clocks = ClockControl::max(system.clock_control).freeze();
-    let mut delay = Delay::new(&clocks);
 
-    let wifi_control = WifiController::new("MERCUSYS_1A43", "56272697", WifiMode::ApSta);
-    let connected = wifi_control.connect_to_wifi(
-        peripherals.SYSTIMER,
+    #[cfg(target_arch = "riscv32")]
+    let timer = esp_hal::systimer::SystemTimer::new(peripherals.SYSTIMER).alarm0;
+
+    let _ = controller::connect_to_wifi(
+        WifiMode::ApSta,
+        spawner,
+        peripherals.WIFI,
+        timer,
+        peripherals.TIMG0,
         peripherals.RNG,
         system.radio_clock_control,
         &clocks,
-        peripherals.WIFI,
-        &mut delay,
-    );
+    )
+    .await;
 
-    dbg!("Connected to wifi: {connected:?}");
-
-    let analog = peripherals.APB_SARADC.split();
-    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
-    let mut gardener = Gardener::setup(io, analog);
-
-    loop {
-        let h = gardener.read_humidity();
-        println!("Humidity percent= {:?}", h);
-        delay.delay_ms(3000u32);
-    }
+    loop {}
 }
